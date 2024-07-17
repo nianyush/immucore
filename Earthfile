@@ -6,6 +6,7 @@ ARG OSBUILDER_IMAGE=quay.io/kairos/osbuilder-tools:$OSBUILDER_VERSION
 ARG GOLINT_VERSION=v1.57.2
 # renovate: datasource=docker depName=golang
 ARG GO_VERSION=1.20-bookworm
+ARG GOLANG_VERSION=1.22
 
 version:
     FROM +go-deps
@@ -19,11 +20,11 @@ version:
 
 go-deps:
     ARG GO_VERSION
-    FROM golang:$GO_VERSION
-    RUN apt-get update && apt-get install -y rsync gcc bash git
+    FROM gcr.io/spectro-images-public/golang:${GOLANG_VERSION}-alpine
+    # RUN apt-get update && apt-get install -y rsync gcc bash git
     WORKDIR /build
     COPY . .
-    RUN go mod tidy --compat=1.19
+    RUN go mod tidy --compat=1.22
     RUN go mod download
     RUN go mod verify
 
@@ -46,15 +47,24 @@ build-immucore:
     COPY +version/COMMIT ./
     ARG VERSION=$(cat VERSION)
     ARG COMMIT=$(cat COMMIT)
-    ARG LDFLAGS="-s -w -X github.com/kairos-io/immucore/internal/version.version=$VERSION -X github.com/kairos-io/immucore/internal/version.gitCommit=$COMMIT"
-    RUN echo ${LDFLAGS}
-    RUN CGO_ENABLED=0 go build -o immucore -ldflags "${LDFLAGS}"
+    # ARG LDFLAGS="-s -w -X github.com/kairos-io/immucore/internal/version.version=$VERSION -X github.com/kairos-io/immucore/internal/version.gitCommit=$COMMIT"
+    # RUN echo ${LDFLAGS}
+    # RUN CGO_ENABLED=0 go build -o immucore -ldflags "${LDFLAGS}"
+    ARG LDFLAGS="-w -X github.com/kairos-io/immucore/internal/version.version=v0.1.34_spectro"
+    RUN go-build-fips.sh -a -o immucore
     SAVE ARTIFACT immucore immucore AS LOCAL build/immucore-$VERSION
 
 # Alias for ease of use
 build:
     BUILD +build-immucore
 
+framework:
+    FROM quay.io/kairos/framework:v2.7.41-fips
+    
+    COPY +build-immucore/immucore* /usr/bin/immucore
+    
+    SAVE IMAGE --push gcr.io/spectro-dev-public/nianyu/framework:v2.7.41-fips-spectro
+    
 dracut-artifacts:
     FROM scratch
     WORKDIR /build
