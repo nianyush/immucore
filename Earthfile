@@ -50,7 +50,7 @@ build-immucore:
     # ARG LDFLAGS="-s -w -X github.com/kairos-io/immucore/internal/version.version=$VERSION -X github.com/kairos-io/immucore/internal/version.gitCommit=$COMMIT"
     # RUN echo ${LDFLAGS}
     # RUN CGO_ENABLED=0 go build -o immucore -ldflags "${LDFLAGS}"
-    ARG LDFLAGS="-w -X github.com/kairos-io/immucore/internal/version.version=v0.1.34_spectro -X github.com/kairos-io/immucore/internal/version.gitCommit=v0.1.34_spectro"
+    ARG GO_LDFLAGS="-w -X github.com/kairos-io/immucore/internal/version.version=v0.1.34_spectro"
     RUN go-build-fips.sh -a -o immucore
     SAVE ARTIFACT immucore immucore AS LOCAL build/immucore-$VERSION
 
